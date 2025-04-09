@@ -55,7 +55,15 @@ func main() {
 }
 
 func RWFilter(info *mountinfo.Info) (bool, bool) {
-	if info.FSType == "tmpfs" || strings.Contains(info.Options, "ro") {
+	var pseudoFs bool
+	switch info.FSType {
+	case "devtmpfs", "proc", "sysfs", "cgroup", "cgroup2", "pstore", "bpf", "securityfs", "debugfs", "tracefs", "mqueue", "hugetlbfs", "configfs", "efivarfs", "autofs", "binfmt_misc", "fusectl", "rpc_pipefs", "devpts", "tmpfs":
+		pseudoFs = true
+	default:
+		pseudoFs = false
+	}
+
+	if pseudoFs || strings.Contains(info.Options, "ro") || info.Mountpoint == "/" {
 		return false, false
 	}
 
