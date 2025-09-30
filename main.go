@@ -32,18 +32,19 @@ func main() {
 			}
 
 			for _, i := range minfo {
+				log.Printf("Remounting %q read-only", i.Mountpoint)
 				if err := unix.Mount("", i.Mountpoint, "", unix.MS_REMOUNT|unix.MS_RDONLY, ""); err != nil {
-					log.Fatalf("Failed to remount rootfs: %v", err)
+					log.Fatalf("Failed to remount %q: %v", i.Mountpoint, err)
 				}
 			}
-		}
-
-		if err := os.WriteFile("/proc/sysrq-trigger", []byte("u"), 00644); err != nil {
-			log.Fatalf("Failed to remount rootfs: %v", err)
+		} else {
+			if err := os.WriteFile("/proc/sysrq-trigger", []byte("u"), 00644); err != nil {
+				log.Fatalf("Failed to remount rootfs: %v", err)
+			}
 		}
 	}
 
-	log.Println("Overwriting flash contents...")
+	log.Println("Overwriting flash contents via mtd access...")
 	if err := flashcp.FlashCp(*img, *dev, 0); err != nil {
 		log.Fatalf("Failed to overwrite flash: %v", err)
 	}
@@ -64,8 +65,8 @@ func RWFilter(info *mountinfo.Info) (bool, bool) {
 	}
 
 	if pseudoFs || strings.Contains(info.Options, "ro") || info.Mountpoint == "/" {
-		return false, false
+		return true, false
 	}
 
-	return true, false
+	return false, false
 }
