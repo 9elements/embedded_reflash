@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"log"
 	"os"
@@ -11,9 +12,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+//go:embed builtin.img
+var builtinImg []byte
+
 func main() {
 	dev := flag.String("device", "/dev/mtd0", "Flash device to write to")
-	img := flag.String("image", "/tmp/flash.img", "Flash image to write")
+	img := flag.String("image", "/tmp/flash.img", "Flash image to write OR path to write built-in image to")
+	builtin := flag.Bool("builtin", false, "Use built-in image")
 	skipRemount := flag.Bool("skip-remount", false, "Skip remounting rootfs read-only")
 	flag.Parse()
 
@@ -41,6 +46,17 @@ func main() {
 			if err := os.WriteFile("/proc/sysrq-trigger", []byte("u"), 00644); err != nil {
 				log.Fatalf("Failed to remount rootfs: %v", err)
 			}
+		}
+	}
+
+	if *builtin {
+		if len(builtinImg) == 0 {
+			log.Fatal("No built-in image available in binary!")
+		}
+
+		log.Printf("Writing built-in image to %q...", *img)
+		if err := os.WriteFile(*img, builtinImg, 0o600); err != nil {
+			log.Fatalf("Failed to write built-in image to %q: %v", *img, err)
 		}
 	}
 
